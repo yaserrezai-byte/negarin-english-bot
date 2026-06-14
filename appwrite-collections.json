@@ -1,0 +1,99 @@
+{
+  "database_id": "english_bot",
+  "database_name": "English Bot Database",
+  "collections": [
+    {
+      "id": "users",
+      "name": "Users",
+      "permissions": ["collection"],
+      "attributes": [
+        {"key": "telegram_id", "type": "integer", "required": true, "array": false},
+        {"key": "full_name", "type": "string", "size": 255, "required": false, "array": false},
+        {"key": "username", "type": "string", "size": 100, "required": false, "array": false},
+        {"key": "level", "type": "string", "size": 10, "required": false, "array": false},
+        {"key": "current_lesson", "type": "integer", "required": false, "array": false, "default": 0},
+        {"key": "course_week", "type": "integer", "required": false, "array": false, "default": 0},
+        {"key": "status", "type": "string", "size": 20, "required": false, "array": false, "default": "placement"},
+        {"key": "created_at", "type": "string", "size": 50, "required": false, "array": false},
+        {"key": "last_lesson_at", "type": "string", "size": 50, "required": false, "array": false}
+      ]
+    },
+    {
+      "id": "lessons",
+      "name": "Lessons",
+      "permissions": ["collection"],
+      "attributes": [
+        {"key": "level_code", "type": "string", "size": 10, "required": true, "array": false},
+        {"key": "lesson_number", "type": "integer", "required": true, "array": false},
+        {"key": "title", "type": "string", "size": 255, "required": false, "array": false},
+        {"key": "content", "type": "string", "size": 5000, "required": false, "array": false},
+        {"key": "video_file_id", "type": "string", "size": 500, "required": false, "array": false},
+        {"key": "homework_type", "type": "string", "size": 20, "required": false, "array": false},
+        {"key": "homework_desc", "type": "string", "size": 2000, "required": false, "array": false}
+      ]
+    },
+    {
+      "id": "homework",
+      "name": "Homework",
+      "permissions": ["collection"],
+      "attributes": [
+        {"key": "user_id", "type": "integer", "required": true, "array": false},
+        {"key": "lesson_id", "type": "string", "size": 50, "required": true, "array": false},
+        {"key": "type", "type": "string", "size": 20, "required": false, "array": false},
+        {"key": "file_id", "type": "string", "size": 500, "required": false, "array": false},
+        {"key": "file_type", "type": "string", "size": 20, "required": false, "array": false},
+        {"key": "text_content", "type": "string", "size": 5000, "required": false, "array": false},
+        {"key": "submitted_at", "type": "string", "size": 50, "required": false, "array": false},
+        {"key": "status", "type": "string", "size": 20, "required": false, "array": false, "default": "pending"},
+        {"key": "score", "type": "integer", "required": false, "array": false, "default": 0},
+        {"key": "teacher_comment", "type": "string", "size": 2000, "required": false, "array": false}
+      ]
+    },
+    {
+      "id": "placement_questions",
+      "name": "Placement Questions",
+      "permissions": ["collection"],
+      "attributes": [
+        {"key": "level_code", "type": "string", "size": 10, "required": false, "array": false},
+        {"key": "question_text", "type": "string", "size": 2000, "required": true, "array": false},
+        {"key": "options", "type": "string", "size": 4000, "required": false, "array": false},
+        {"key": "correct_answer", "type": "integer", "required": false, "array": false, "default": 0}
+      ]
+    },
+    {
+      "id": "placement_answers",
+      "name": "Placement Answers",
+      "permissions": ["collection"],
+      "attributes": [
+        {"key": "user_id", "type": "integer", "required": true, "array": false},
+        {"key": "question_id", "type": "string", "size": 50, "required": true, "array": false},
+        {"key": "answer", "type": "integer", "required": false, "array": false},
+        {"key": "is_correct", "type": "boolean", "required": false, "array": false}
+      ]
+    },
+    {
+      "id": "exams",
+      "name": "Exams",
+      "permissions": ["collection"],
+      "attributes": [
+        {"key": "level_code", "type": "string", "size": 10, "required": true, "array": false},
+        {"key": "exam_type", "type": "string", "size": 50, "required": true, "array": false},
+        {"key": "title", "type": "string", "size": 255, "required": false, "array": false},
+        {"key": "questions_json", "type": "string", "size": 10000, "required": false, "array": false},
+        {"key": "passing_score", "type": "integer", "required": false, "array": false, "default": 70}
+      ]
+    },
+    {
+      "id": "exam_results",
+      "name": "Exam Results",
+      "permissions": ["collection"],
+      "attributes": [
+        {"key": "user_id", "type": "integer", "required": true, "array": false},
+        {"key": "exam_id", "type": "string", "size": 50, "required": true, "array": false},
+        {"key": "score", "type": "integer", "required": false, "array": false},
+        {"key": "passed", "type": "boolean", "required": false, "array": false},
+        {"key": "taken_at", "type": "string", "size": 50, "required": false, "array": false}
+      ]
+    }
+  ]
+}
