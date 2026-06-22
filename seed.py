@@ -20,19 +20,8 @@ client.set_key(os.getenv("APPWRITE_API_KEY"))
 db = Databases(client)
 DATABASE_ID = os.getenv("APPWRITE_DATABASE_ID", "english_bot")
 
-COLLECTIONS = {
-    "users": "users",
-    "lessons": "lessons",
-    "homework": "homework",
-    "placement_questions": "placement_questions",
-    "placement_answers": "placement_answers",
-    "exams": "exams",
-    "exam_results": "exam_results",
-}
-
 
 def ensure_collections():
-    """ساخت کالکشن‌ها در صورت عدم وجود"""
     try:
         db.get(DATABASE_ID)
         print(f"✅ Database '{DATABASE_ID}' موجود است.")
@@ -52,6 +41,7 @@ def ensure_collections():
                 ("status", "string", False, 20),
                 ("created_at", "string", False, 50),
                 ("last_lesson_at", "string", False, 50),
+                ("temp_state", "string", False, 5000),
             ]
         },
         "lessons": {
@@ -131,6 +121,8 @@ def ensure_collections():
                     default = "" if not required else None
                 if name == "status":
                     default = "pending"
+                if name == "temp_state":
+                    default = ""
                 try:
                     if type_ == "string":
                         db.create_string_attribute(DATABASE_ID, col_id, name, size, required, default=default if not required else None)
@@ -143,10 +135,8 @@ def ensure_collections():
 
 
 def seed_data():
-    """ورود داده‌های نمونه"""
     print("\n📥 در حال ورود داده‌های نمونه...")
 
-    # Placement Questions
     questions = [
         ("A1", "What ______ your name?", json.dumps(["is", "are", "am", "be"]), 0),
         ("A1", "I ______ from Iran.", json.dumps(["is", "am", "are", "be"]), 1),
@@ -164,7 +154,6 @@ def seed_data():
         except Exception as e:
             print(f"  ⚠️ Question error: {e}")
 
-    # Lessons (A1 sample)
     lessons = [
         ("A1", 1, "درس ۱: معرفی خود", "در این درس با نحوه معرفی خود آشنا می‌شوید.", "both", "یک متن ۵۰ کلمه‌ای درباره خودتان بنویسید و صوتی بفرستید."),
         ("A1", 2, "درس ۲: خانواده", "در این درس واژگان خانواده را یاد می‌گیرید.", "writing", "درباره خانواده‌تان ۶۰ کلمه بنویسید."),
@@ -183,7 +172,6 @@ def seed_data():
         except Exception as e:
             print(f"  ⚠️ Lesson error: {e}")
 
-    # Exam (A1)
     exam_questions = json.dumps([
         {"q": "Choose the correct sentence:", "options": ["He don't like apples", "He doesn't likes apples", "He doesn't like apples", "He not like apples"], "correct": 2},
         {"q": "______ you live in Tehran?", "options": ["Do", "Does", "Are", "Is"], "correct": 0},

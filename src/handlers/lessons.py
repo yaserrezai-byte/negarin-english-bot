@@ -1,6 +1,6 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
-from appwrite_db import get_user, get_lesson, get_lessons_by_level, update_user_lesson
+from appwrite_db import get_user_sync, get_lesson_sync, get_lessons_by_level_sync, update_user_lesson_sync
 from keyboards import (
     main_menu_keyboard,
     next_lesson_keyboard,
@@ -14,7 +14,7 @@ router = Router()
 
 @router.callback_query(F.data == "continue_course")
 async def continue_course(callback: CallbackQuery):
-    user = await get_user(callback.from_user.id)
+    user = get_user_sync(callback.from_user.id)
     if not user or user.get("status") != "active":
         await callback.message.edit_text("❌ شما هنوز دوره‌ای فعال ندارید.")
         return
@@ -34,9 +34,9 @@ async def continue_course(callback: CallbackQuery):
         await callback.answer()
         return
 
-    lesson = await get_lesson(level, current + 1)
+    lesson = get_lesson_sync(level, current + 1)
     if not lesson:
-        all_lessons = await get_lessons_by_level(level)
+        all_lessons = get_lessons_by_level_sync(level)
         if current >= len(all_lessons):
             await callback.message.edit_text(
                 f"🎉 تبریک! تمام درس‌های سطح {level} تمام شد.\n"
@@ -65,7 +65,7 @@ async def continue_course(callback: CallbackQuery):
     else:
         await callback.message.answer(text, parse_mode="HTML")
 
-    await update_user_lesson(callback.from_user.id, lesson.get("lesson_number", 0))
+    update_user_lesson_sync(callback.from_user.id, lesson.get("lesson_number", 0))
 
     await callback.message.answer(
         "✅ درس ارسال شد. لطفاً تکلیف این درس را تحویل دهید:",

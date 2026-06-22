@@ -8,7 +8,6 @@ import config
 db = get_databases()
 DATABASE_ID = config.APPWRITE_DATABASE_ID
 
-# Collection IDs (must match Appwrite Console)
 COL_USERS = "users"
 COL_LESSONS = "lessons"
 COL_HOMEWORK = "homework"
@@ -18,13 +17,12 @@ COL_EXAMS = "exams"
 COL_EXAM_RESULTS = "exam_results"
 
 
-# ─── Helpers ───
 def _now():
     return datetime.utcnow().isoformat()
 
 
 # ─── Users ───
-async def get_user(telegram_id: int):
+def get_user_sync(telegram_id: int):
     try:
         res = db.list_documents(DATABASE_ID, COL_USERS, queries=[
             Query.equal("telegram_id", telegram_id)
@@ -36,7 +34,7 @@ async def get_user(telegram_id: int):
         return None
 
 
-async def register_user(telegram_id: int, full_name: str, username: str = None):
+def register_user_sync(telegram_id: int, full_name: str, username: str = None):
     try:
         doc = db.create_document(
             DATABASE_ID, COL_USERS, ID.unique(),
@@ -50,6 +48,7 @@ async def register_user(telegram_id: int, full_name: str, username: str = None):
                 "status": "placement",
                 "created_at": _now(),
                 "last_lesson_at": "",
+                "temp_state": "",
             }
         )
         return doc
@@ -58,8 +57,8 @@ async def register_user(telegram_id: int, full_name: str, username: str = None):
         return None
 
 
-async def update_user_level(telegram_id: int, level: str, status: str = "active"):
-    user = await get_user(telegram_id)
+def update_user_level_sync(telegram_id: int, level: str, status: str = "active"):
+    user = get_user_sync(telegram_id)
     if not user:
         return
     db.update_document(DATABASE_ID, COL_USERS, user["$id"], {
@@ -68,8 +67,8 @@ async def update_user_level(telegram_id: int, level: str, status: str = "active"
     })
 
 
-async def update_user_lesson(telegram_id: int, lesson_number: int):
-    user = await get_user(telegram_id)
+def update_user_lesson_sync(telegram_id: int, lesson_number: int):
+    user = get_user_sync(telegram_id)
     if not user:
         return
     db.update_document(DATABASE_ID, COL_USERS, user["$id"], {
@@ -78,8 +77,46 @@ async def update_user_lesson(telegram_id: int, lesson_number: int):
     })
 
 
+# ─── Temp State (for stateless serverless) ───
+def set_user_temp_state_sync(telegram_id: int, state_data: dict):
+    user = get_user_sync(telegram_id)
+    if not user:
+        return
+    try:
+        db.update_document(DATABASE_ID, COL_USERS, user["$id"], {
+            "temp_state": json.dumps(state_data)
+        })
+    except Exception as e:
+        print(f"set_temp_state error: {e}")
+
+
+def get_user_temp_state_sync(telegram_id: int) -> dict:
+    user = get_user_sync(telegram_id)
+    if not user:
+        return {}
+    ts = user.get("temp_state", "")
+    if not ts:
+        return {}
+    try:
+        return json.loads(ts)
+    except Exception:
+        return {}
+
+
+def clear_temp_state_sync(telegram_id: int):
+    user = get_user_sync(telegram_id)
+    if not user:
+        return
+    try:
+        db.update_document(DATABASE_ID, COL_USERS, user["$id"], {
+            "temp_state": ""
+        })
+    except Exception as e:
+        print(f"clear_temp_state error: {e}")
+
+
 # ─── Placement Questions ───
-async def get_placement_questions(level_code: str = None):
+def get_placement_questions_sync(level_code: str = None):
     queries = [Query.limit(100)]
     if level_code:
         queries.append(Query.equal("level_code", level_code))
@@ -91,7 +128,7 @@ async def get_placement_questions(level_code: str = None):
         return []
 
 
-async def clear_placement_answers(user_id: int):
+def clear_placement_answers_sync(user_id: int):
     try:
         res = db.list_documents(DATABASE_ID, COL_PLACEMENT_A, queries=[
             Query.equal("user_id", user_id)
@@ -102,7 +139,7 @@ async def clear_placement_answers(user_id: int):
         print(f"clear_placement_answers error: {e}")
 
 
-async def save_placement_answer(user_id: int, question_id: str, answer: int, is_correct: bool):
+def save_placement_answer_sync(user_id: int, question_id: str, answer: int, is_correct: bool):
     try:
         db.create_document(DATABASE_ID, COL_PLACEMENT_A, ID.unique(), {
             "user_id": user_id,
@@ -114,7 +151,7 @@ async def save_placement_answer(user_id: int, question_id: str, answer: int, is_
         print(f"save_placement_answer error: {e}")
 
 
-async def get_user_placement_score(user_id: int):
+def get_user_placement_score_sync(user_id: int):
     try:
         res = db.list_documents(DATABASE_ID, COL_PLACEMENT_A, queries=[
             Query.equal("user_id", user_id)
@@ -129,7 +166,7 @@ async def get_user_placement_score(user_id: int):
 
 
 # ─── Lessons ───
-async def get_lessons_by_level(level_code: str):
+def get_lessons_by_level_sync(level_code: str):
     try:
         res = db.list_documents(DATABASE_ID, COL_LESSONS, queries=[
             Query.equal("level_code", level_code),
@@ -142,7 +179,7 @@ async def get_lessons_by_level(level_code: str):
         return []
 
 
-async def get_lesson(level_code: str, lesson_number: int):
+def get_lesson_sync(level_code: str, lesson_number: int):
     try:
         res = db.list_documents(DATABASE_ID, COL_LESSONS, queries=[
             Query.equal("level_code", level_code),
@@ -156,7 +193,7 @@ async def get_lesson(level_code: str, lesson_number: int):
         return None
 
 
-async def set_lesson_video(lesson_id: str, video_file_id: str):
+def set_lesson_video_sync(lesson_id: str, video_file_id: str):
     try:
         db.update_document(DATABASE_ID, COL_LESSONS, lesson_id, {
             "video_file_id": video_file_id,
@@ -166,7 +203,7 @@ async def set_lesson_video(lesson_id: str, video_file_id: str):
 
 
 # ─── Homework ───
-async def submit_homework(user_id: int, lesson_id: str, hw_type: str, file_id: str = None, file_type: str = None, text: str = None):
+def submit_homework_sync(user_id: int, lesson_id: str, hw_type: str, file_id: str = None, file_type: str = None, text: str = None):
     try:
         db.create_document(DATABASE_ID, COL_HOMEWORK, ID.unique(), {
             "user_id": user_id,
@@ -184,17 +221,15 @@ async def submit_homework(user_id: int, lesson_id: str, hw_type: str, file_id: s
         print(f"submit_homework error: {e}")
 
 
-async def get_pending_homework():
+def get_pending_homework_sync():
     try:
         res = db.list_documents(DATABASE_ID, COL_HOMEWORK, queries=[
             Query.equal("status", "pending"),
             Query.limit(100),
         ])
         docs = res.get("documents", [])
-        # Enrich with user and lesson info
         result = []
         for d in docs:
-            # get user
             try:
                 ures = db.list_documents(DATABASE_ID, COL_USERS, queries=[
                     Query.equal("telegram_id", d.get("user_id")),
@@ -204,7 +239,6 @@ async def get_pending_homework():
                 user = udocs[0] if udocs else {}
             except:
                 user = {}
-            # get lesson
             try:
                 ldoc = db.get_document(DATABASE_ID, COL_LESSONS, d.get("lesson_id"))
             except:
@@ -220,7 +254,7 @@ async def get_pending_homework():
         return []
 
 
-async def review_homework(homework_id: str, score: int, comment: str):
+def review_homework_sync(homework_id: str, score: int, comment: str):
     try:
         db.update_document(DATABASE_ID, COL_HOMEWORK, homework_id, {
             "status": "reviewed",
@@ -232,7 +266,7 @@ async def review_homework(homework_id: str, score: int, comment: str):
 
 
 # ─── Exams ───
-async def get_exam(level_code: str, exam_type: str = "level_exit"):
+def get_exam_sync(level_code: str, exam_type: str = "level_exit"):
     try:
         res = db.list_documents(DATABASE_ID, COL_EXAMS, queries=[
             Query.equal("level_code", level_code),
@@ -246,7 +280,7 @@ async def get_exam(level_code: str, exam_type: str = "level_exit"):
         return None
 
 
-async def save_exam_result(user_id: int, exam_id: str, score: int, passed: bool):
+def save_exam_result_sync(user_id: int, exam_id: str, score: int, passed: bool):
     try:
         db.create_document(DATABASE_ID, COL_EXAM_RESULTS, ID.unique(), {
             "user_id": user_id,

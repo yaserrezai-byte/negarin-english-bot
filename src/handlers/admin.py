@@ -1,7 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message
 from aiogram.filters import Command
-from appwrite_db import get_pending_homework, review_homework, set_lesson_video
+from appwrite_db import get_pending_homework_sync, review_homework_sync, set_lesson_video_sync
 from config import ADMIN_IDS
 from keyboards import admin_keyboard
 
@@ -20,7 +20,7 @@ async def show_pending_homework(callback: CallbackQuery):
     if callback.from_user.id not in ADMIN_IDS:
         await callback.answer("⛔️")
         return
-    homeworks = await get_pending_homework()
+    homeworks = get_pending_homework_sync()
     if not homeworks:
         await callback.message.edit_text("📭 تکلیف در انتظاری وجود ندارد.")
         return
@@ -64,7 +64,7 @@ async def cmd_review(message: Message):
         hw_id = parts[1]
         score = int(parts[2])
         comment = parts[3]
-        await review_homework(hw_id, score, comment)
+        review_homework_sync(hw_id, score, comment)
         await message.answer("✅ تکلیف تصحیح و ثبت شد.")
     except Exception as e:
         await message.answer(f"❌ خطا: {e}")
@@ -98,7 +98,7 @@ async def cmd_set_video(message: Message):
     try:
         lesson_id = parts[1]
         file_id = message.reply_to_message.video.file_id
-        await set_lesson_video(lesson_id, file_id)
+        set_lesson_video_sync(lesson_id, file_id)
         await message.answer("✅ ویدیو برای درس ثبت شد.")
     except Exception as e:
         await message.answer(f"❌ خطا: {e}")

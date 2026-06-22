@@ -1,49 +1,44 @@
 import json
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
 from appwrite_db import (
-    get_user,
-    get_placement_questions,
-    save_placement_answer,
-    get_user_placement_score,
-    update_user_level,
-    clear_placement_answers,
+    get_user_sync,
+    get_placement_questions_sync,
+    save_placement_answer_sync,
+    get_user_placement_score_sync,
+    update_user_level_sync,
+    clear_placement_answers_sync,
+    set_user_temp_state_sync,
+    get_user_temp_state_sync,
+    clear_temp_state_sync,
 )
 from keyboards import main_menu_keyboard, answer_options_keyboard
 
 router = Router()
 
-
-class PlacementState(StatesGroup):
-    answering = State()
-
-
 PLACEMENT_QUESTIONS = []
 
 
-async def load_questions():
+def load_questions():
     global PLACEMENT_QUESTIONS
-    PLACEMENT_QUESTIONS = await get_placement_questions()
+    PLACEMENT_QUESTIONS = get_placement_questions_sync()
 
 
 @router.callback_query(F.data == "start_placement")
-async def start_placement(callback: CallbackQuery, state: FSMContext):
-    await load_questions()
+async def start_placement(callback: CallbackQuery):
+    load_questions()
     if not PLACEMENT_QUESTIONS:
         await callback.message.edit_text("❌ سوالات تعیین سطح هنوز تنظیم نشده است.")
         return
-    await clear_placement_answers(callback.from_user.id)
-    await state.set_state(PlacementState.answering)
-    await state.update_data(q_index=0)
+    clear_placement_answers_sync(callback.from_user.id)
+    set_user_temp_state_sync(callback.from_user.id, {"status": "placement", "q_index": 0})
     await callback.answer()
     await show_question(callback.message, 0)
 
 
 async def show_question(message, q_index: int):
     if q_index >= len(PLACEMENT_QUESTIONS):
-        result = await get_user_placement_score(message.chat.id)
+        result = get_user_placement_score_sync(message.chat.id)
         total = result["total"]
         correct = result["correct"]
         percentage = (correct / total * 100) if total else 0
@@ -61,7 +56,8 @@ async def show_question(message, q_index: int):
         else:
             level = "C2"
 
-        await update_user_level(message.chat.id, level, status="active")
+        update_user_level_sync(message.chat.id, level, status="active")
+        clear_temp_state_sync(message.chat.id)
         await message.answer(
             f"✅ تعیین سطح تمام شد!\n\n"
             f"🎯 نمره: {correct} از {total} ({percentage:.0f}%)\n"
@@ -81,10 +77,12 @@ async def show_question(message, q_index: int):
 
 
 @router.callback_query(F.data.startswith("placement_answer:"))
-async def handle_answer(callback: CallbackQuery, state: FSMContext):
-    if not await state.get_state():
+async def handle_answer(callback: CallbackQuery):
+    state = get_user_temp_state_sync(callback.from_user.id)
+    if state.get("status") != "placement":
         await callback.answer()
         return
+
     parts = callback.data.split(":")
     question_id = parts[1]
     answer_idx = int(parts[2])
@@ -97,11 +95,10 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext):
     correct = int(q.get("correct_answer", 0))
     is_correct = (answer_idx == correct)
 
-    await save_placement_answer(callback.from_user.id, question_id, answer_idx, is_correct)
+    save_placement_answer_sync(callback.from_user.id, question_id, answer_idx, is_correct)
 
-    data = await state.get_data()
-    q_index = data.get("q_index", 0) + 1
-    await state.update_data(q_index=q_index)
+    q_index = state.get("q_index", 0) + 1
+    set_user_temp_state_sync(callback.from_user.id, {"status": "placement", "q_index": q_index})
 
     await callback.answer("✅ درست" if is_correct else "❌ غلط")
     await show_question(callback.message, q_index)
